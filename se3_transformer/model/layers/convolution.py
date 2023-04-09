@@ -113,7 +113,8 @@ class RadialProfile(nn.Module):
             nn.Linear(mid_dim, num_freq * channels_in * channels_out, bias=False)
         ]
 
-        self.net = torch.jit.script(nn.Sequential(*[m for m in modules if m is not None]))
+        # self.net = torch.jit.script(nn.Sequential(*[m for m in modules if m is not None]))
+        self.net = nn.Sequential(*[m for m in modules if m is not None])
 
     def forward(self, features: Tensor) -> Tensor:
         return self.net(features)
@@ -159,6 +160,9 @@ class VersatileConvSE3(nn.Module):
             else:
                 # k = l = 0 non-fused case
                 return radial_weights @ features
+
+
+def eval_func(m, *x): return m(*x)
 
 
 class ConvSE3(nn.Module):
@@ -207,7 +211,8 @@ class ConvSE3(nn.Module):
         self.self_interaction = self_interaction
         self.max_degree = max_degree
         self.allow_fused_output = allow_fused_output
-        self.conv_checkpoint = torch.utils.checkpoint.checkpoint if low_memory else lambda m, *x: m(*x)
+        self.conv_checkpoint = torch.utils.checkpoint.checkpoint if low_memory else eval_func
+        # self.conv_checkpoint = torch.utils.checkpoint.checkpoint if low_memory else lambda m, *x: m(*x)
 
         # channels_in: account for the concatenation of edge features
         channels_in_set = set([f.channels + fiber_edge[f.degree] * (f.degree > 0) for f in self.fiber_in])
